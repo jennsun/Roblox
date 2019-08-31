@@ -1,0 +1,21 @@
+// used under ScreenGui -> TextButton -> LocalScript
+// makes sure button works
+
+local animation = Instance.new("Animation")
+animation.AnimationId = "http://www.roblox.com/Asset?ID=591335850"
+
+local trackanimation = nil
+local playability = true
+function playAnimation(AnimationSource)
+if playability == true then
+	local plr = game.Players.LocalPlayer
+	trackanimation = plr.Character.Humanoid:LoadAnimation(animation)
+	trackanimation.KeyframeReached:connect(function()
+		print('Working')
+	
+
+	end)
+	trackanimation:Play()
+end
+end
+script.Parent.MouseButton1Click:connect(playAnimation)
