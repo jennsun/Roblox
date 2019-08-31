@@ -1,0 +1,592 @@
+/* 
+* insert this under Catalog under StarterGui in Roblox Studio
+*/
+
+--[[if script.Parent~=workspace.CurrentCamera then
+	repeat wait() script.Parent=workspace.CurrentCamera 
+		
+	until script.Parent==workspace.CurrentCamera
+end
+repeat wait() script.Parent=nil until script.Parent==nil
+print(script.Parent," is my parent")--]]
+local plr=game.Players.LocalPlayer; repeat wait() until plr.Character
+local char = plr.Character
+local catChar=nil
+local rot=0
+local tim = tick()
+local curAnim = nil
+local run=game:GetService('RunService')
+local input=game:GetService'UserInputService'
+local mouseCnn={}
+local deviceT="MouseButton1Down"
+local ghost = {}
+local trooper=require(script.Parent:WaitForChild'cloneTrooper')
+local market=game:GetService'MarketplaceService'
+
+local catalog=script.Parent
+local menu=catalog:WaitForChild'Menus':WaitForChild'Catalog' 
+local cover=menu:WaitForChild('Cover')
+local comm=game.ReplicatedStorage:WaitForChild'Com'
+
+function click()
+	--[[local sound=create("Sound"){
+			Name="Sound",
+			SoundId="http://www.roblox.com/asset/?id=177266782",
+			Volume=.3,
+			PlayOnRemove=true,
+			Parent=workspace.CurrentCamera
+		}
+		sound:Destroy()--]]
+end
+function pop()
+	--[[local sound=create("Sound"){
+			Name="Sound",
+			SoundId="http://www.roblox.com/asset/?id=347564086",
+			PlayOnRemove=true,
+			Parent=workspace.CurrentCamera
+		}
+		sound:Destroy()--]]
+end
+
+
+local function rota()
+	spawn(function()
+		while cover.Visible do
+			cover:WaitForChild'ImageLabel'.Rotation=cover:WaitForChild'ImageLabel'.Rotation+1
+			game:GetService'RunService'.RenderStepped:wait()
+		end
+	end)
+end
+cover.Changed:connect(function()
+	if cover.Visible then rota() end
+end)
+
+function loadCat()
+local head=menu:WaitForChild("Header")
+local ex=menu:WaitForChild("Example")
+local frmEx=menu:WaitForChild'FrameEx'
+local nav=menu:WaitForChild('Nav')
+local purchase=game.ReplicatedStorage:WaitForChild('ITEM_PURCHASE')
+local stuff=game.ReplicatedStorage:WaitForChild('Items')
+local get_query=game.ReplicatedStorage:WaitForChild('SEARCH')
+local page=1
+local turning=false
+local footer=menu:WaitForChild('Footer')
+local frm=menu:WaitForChild('Container')
+local searching=false
+local query=''
+local searches={}
+ print('Loaded most global variables!')
+local search_type='Accessories'
+local hat_={}
+local clickeds={}
+
+head.Search.FocusLost:connect(function(enterPressed)
+	if turning then return end
+	turning=true
+	print("Searching")
+	if enterPressed and head.Search.Text~='' and head.Search.Text~='TYPE HERE' then
+		query=head.Search.Text
+		page=1
+		local e,r=pcall(function() frm['SEARCHES']:ClearAllChildren() end)
+		load_items()
+		footer.page.Text='Page 1'
+	elseif enterPressed and head.Search.Text=='' then
+		query=''
+		page=1
+		load_items()
+		footer.page.Text='Page 1'
+	end
+	turning=false
+end)
+
+head:WaitForChild'Go'.TextButton.MouseButton1Down:connect(function()
+	if turning then return end
+	turning=true
+	print("Searching")
+	if head.Search.Text~='' and head.Search.Text~='TYPE HERE' then
+	query=head.Search.Text
+	page=1
+	local e,r=pcall(function() frm['SEARCHES']:ClearAllChildren() end)
+	load_items()
+	footer.page.Text='Page 1'
+	else
+		query=''
+		page=1
+		load_items()
+		footer.page.Text='Page 1'
+	end
+	turning=false
+end)
+
+function loadModel()
+	char.Archivable = true
+	local clo = char:Clone()
+	local mouseDown=false
+	local lastX=0
+	local x,e=pcall(function()
+		for a,d in pairs(clo:GetChildren()) do
+			if (d:IsA'Script' or d:IsA'BillboardGui' or d:IsA'ForceField') and d.Name~="Animate" then
+				d:Destroy()
+			end
+		end
+		for a,d in pairs (clo.Head:GetChildren()) do
+			if d:IsA'Sound' then
+				d:Stop()
+			end
+		end
+		local torso = clo:FindFirstChild'Torso' or clo:FindFirstChild'UpperTorso'
+		local function makeGhost()
+			for a,d in pairs(clo:GetChildren()) do
+				if d:IsA'BasePart' then
+					d.CanCollide = false
+				end
+			end
+		end
+		for a,d in pairs(mouseCnn) do
+			d:Disconnect()
+			table.remove(mouseCnn,a)
+		end
+		mouseCnn[1]=input.InputBegan:connect(function(i)
+			if i.UserInputType==Enum.UserInputType.MouseButton1 then
+				if i.UserInputState==Enum.UserInputState.Begin then
+					local loc=input:GetMouseLocation()
+					if loc.X>=frm.AbsolutePosition.X+frm.AbsoluteSize.X then
+						lastX=loc.X
+						mouseDown=true
+					end
+				end
+			end
+		end)
+		mouseCnn[2]=input.InputEnded:connect(function(i)
+			if i.UserInputType==Enum.UserInputType.MouseButton1 then
+				if i.UserInputState==Enum.UserInputState.End then
+					mouseDown=false
+				end
+			end
+		end)
+		mouseCnn[3]=input.InputChanged:connect(function(i)
+			if i.UserInputType==Enum.UserInputType.MouseMovement then
+				if mouseDown then
+					rot=(rot+((i.Position.X-lastX)/2)) % 360
+					lastX=i.Position.X
+				end
+			end
+		end)
+		for a,d in pairs(ghost) do
+			d:Disconnect()
+			table.remove(ghost,a)
+		end
+		ghost={game:GetService('RunService').Stepped:connect(function()
+			makeGhost()
+		end),
+		torso.Changed:connect(function()
+			makeGhost()
+		end)}
+		char.Archivable=false
+		local siz = {"BodyDepthScale","BodyHeightScale","BodyWidthScale","HeadScale"}
+		local yOff=2
+		if clo.Humanoid.RigType==Enum.HumanoidRigType.R15 then
+			for a,d in pairs(siz) do clo.Humanoid[d].Value = .5 end
+		else
+			--trooper.scaleCharacter(clo,.5)
+			yOff=4
+		end
+		local function doRot()
+			local ray=workspace.CurrentCamera:ScreenPointToRay(frm.AbsoluteSize.X+frm.AbsolutePosition.X+100,((frm.AbsoluteSize.Y/yOff)+frm.AbsolutePosition.Y),10)
+			local view = workspace.CurrentCamera.ViewportSize
+			clo:SetPrimaryPartCFrame(CFrame.new(ray.Origin, ray.Origin + workspace.CurrentCamera.CFrame.lookVector)*CFrame.fromEulerAnglesXYZ(0,math.rad(rot),0))
+		end
+		doRot()
+		clo.Parent=workspace.CurrentCamera
+		run:BindToRenderStep("Bind",Enum.RenderPriority.Camera.Value,function()
+			if tick()-tim>5 then
+				tim=tick()
+				local anim = clo.Animate:GetChildren()[math.random(1,#clo.Animate:GetChildren())]:GetChildren()[1]
+				if curAnim ~= nil then curAnim:Stop() curAnim:Destroy() end		
+				curAnim = clo.Humanoid:LoadAnimation(anim)
+				curAnim:Play(.5)
+			end
+			doRot()
+			if not mouseDown then
+				rot=(rot+1)%360
+			end
+		end)
+	end) if not x then print(e) end
+	catChar=clo
+end
+
+function desModel()
+	if catChar then
+		pcall(function()
+			run:UnbindFromRenderStep("Bind")
+			catChar:Destroy()
+		end)
+		catChar=nil
+	end
+end
+
+function updateCS(scroll)
+	scroll.CanvasSize=UDim2.new(0,0,0,scroll.UIGridLayout.AbsoluteContentSize.Y)
+end
+
+function updateCanvas(cont)
+	for a,d in pairs(cont) do
+		d.UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):connect(function()
+			updateCS(d)
+		end)
+		updateCS(d)
+	end
+end
+
+function setconv(robuxR)
+	robuxR=tostring(robuxR)
+	local st=""
+	for i=robuxR:len(),1,-1 do
+		if i%3==0 and i~=robuxR:len() then
+			st=st..","
+		end
+		st=st..robuxR:sub(robuxR:len()-(i-1),robuxR:len()-(i-1))
+	end
+	return st
+end
+
+function load_items()
+	cover:WaitForChild'TextLabel'.Text="Attempt: 1"
+	cover.Visible=true
+	local tab={}
+	local fr=nil
+	local cur_frm=frm[search_type]
+	
+	local inst={['PageNumber']=page}
+	if search_type=="Accessories" then
+		inst['Category']=search_type
+	else
+		inst['Category']="Clothing"
+		inst['SubCategory']=search_type
+	end
+	if query~='' then
+		inst['Keyword']=query:gsub(" ","_")
+	end
+	inst=stuff:InvokeServer(inst);if not inst then return false end
+	
+	for _,v in pairs(frm:GetChildren()) do
+		v.Visible=false
+	end
+			
+	if query=='' then
+		for _,v in pairs(frm[search_type]:GetChildren()) do
+			v.Visible=false
+		end
+		cur_frm.Visible=true
+	else 
+		if not frm:findFirstChild('SEARCHES') then
+		local hldr_search=Instance.new('Frame',frm); hldr_search.Name='SEARCHES'
+		hldr_search.BackgroundTransparency=1
+		hldr_search.Size=UDim2.new(1,0,1,0)
+		cur_frm=hldr_search
+		else
+			cur_frm=frm['SEARCHES']
+			for _,v in pairs(cur_frm:GetChildren()) do v.Visible=false end
+			cur_frm.Visible=true
+		end
+	end
+	
+	local pageNum=cur_frm:FindFirstChild(tostring(page))
+	
+	if not pageNum or (pageNum and #pageNum:GetChildren()<2) then
+		local page_frame=pageNum or frmEx:Clone();page_frame.Parent=cur_frm;page_frame.Name=tostring(page)
+		for a,d in pairs(inst) do
+			local fr=ex:Clone()
+			fr.itm_img.Image="http://www.roblox.com/Thumbs/Asset.ashx?width=110&height=110&assetId="..d[3]
+			fr.lim_name.Text=d[1]
+			fr.Parent=page_frame
+			fr.Name=d[3]
+			fr.Visible=true
+			local itm_img=fr.itm_img
+			local btn=fr.ViewItem
+			itm_img.id.Value=d[2]
+			itm_img.assetid.Value=d[3]
+			itm_img.AutoButtonColor=false
+			local pgfrm=page_frame
+			pcall(function() itm_img.robux.Value=d[4] end)
+			pcall(function() itm_img.tix.Value=d[5] end)
+			btn.MouseButton1Down:connect(function()
+				print'clicked'
+				click()
+				local id=itm_img.Parent.Name
+				local type=itm_img.id.Value
+				local nam=itm_img.Parent.lim_name.Text
+				local disp=nav:WaitForChild'Display'
+				spawn(function()
+					local x,e=pcall(function()
+						local info=market:GetProductInfo(itm_img.assetid.Value)
+						disp:WaitForChild'cost'.Text="R$"..setconv(info.PriceInRobux)
+					end)
+					if not x then disp:WaitForChild'cost'.Text="R$N/A" end
+				end)
+				disp:WaitForChild'ImageLabel'.Image=itm_img.Image
+				disp:WaitForChild'ImageLabel'.Visible=true
+				disp:WaitForChild'TextLabel'.Visible=false
+				for a,d in pairs(clickeds) do
+					d.Visible=false
+					d.ImageTransparency=1
+					table.remove(clickeds,a)
+					--print("killed",d.Name)
+				end
+				itm_img.Parent.Cover.Visible=true
+				table.insert(clickeds,itm_img.Parent.Cover)
+				for i=1,0,-.1 do
+					if not itm_img.Parent.Cover.Visible then break end
+					itm_img.Parent.Cover.ImageTransparency=i
+					game:GetService('RunService').RenderStepped:wait()
+				end
+				hat_={nam,type,id,itm_img.Parent}
+				--purchase:InvokeServer(nam,type,id)
+			end)
+			page_frame.Visible=true
+		end
+		updateCanvas({page_frame})
+		page_frame.ScrollingEnabled=false
+		page_frame.ScrollingEnabled=true
+	else
+		pageNum.Visible=true
+	end
+	frm['TextLabel'].Visible=#inst==0
+	cover.Visible=false
+end
+
+local function mouseFX(v)
+	for a,d in pairs(nav:WaitForChild'Frame':GetChildren()) do
+				if d:findFirstChild'Locked' then
+					d.Button:TweenPosition(UDim2.new(0,0,0,-5),Enum.EasingDirection.Out,Enum.EasingStyle.Linear,.2,true)
+					d.Locked:Destroy()
+				end
+			end
+	local val=Instance.new('BoolValue',v);val.Name='Locked'
+	v.Button:TweenPosition(UDim2.new(0,0,0,0),Enum.EasingDirection.Out,Enum.EasingStyle.Linear,.2,true)
+end
+
+head:WaitForChild'refresh'.MouseButton1Down:connect(function()
+	if turning then return end
+	turning=true
+	for _,v in pairs(frm:GetChildren()) do
+		v.Visible=false
+	end
+	search_type='Accessories'
+	--frm[search_type].Visible=true
+	for _,v in pairs(frm[search_type]:GetChildren()) do
+		v.Visible=false
+	end
+	query=''
+	local s,e=pcall(function() frm['Accessories'].Visible=true frm['Accessories']['1'].Visible=true end)
+	if not s then warn(e) end
+	page=1
+	footer.page.Text='Page 1'
+	mouseFX(nav:WaitForChild'Frame'['Accessories'])
+	turning=false
+end)
+
+for _,v in pairs(nav:WaitForChild'Frame':GetChildren()) do
+	if v:findFirstChild'Button' then
+		--mouseFX(v)
+		local hldr=Instance.new('Frame',frm)
+		hldr.Name=v.Name
+		hldr.BackgroundTransparency=1
+		hldr.Size=UDim2.new(1,0,1,0)
+		v.Button.MouseButton1Down:connect(function()
+			click()
+			if turning then return end
+			turning=true
+			mouseFX(v)
+			search_type=v.Name
+			page=1
+			footer.page.Text='Page 1'
+			query=''
+			head.Search.Text=''
+			load_items()
+			turning=false
+		end)
+	end
+end
+
+mouseFX(nav:WaitForChild'Frame'['Accessories'])
+
+local function flood(btn,amt)
+	spawn(function()
+		if not amt then amt=-.1 end
+		local img=Instance.new'ImageLabel'
+		btn.ClipsDescendants=true
+		img.BackgroundTransparency=1
+		img.BorderSizePixel=0
+		img.Image="rbxassetid://493643076"
+		img.ImageColor3=Color3.new(btn.BackgroundColor3.r+amt,btn.BackgroundColor3.g+amt,btn.BackgroundColor3.b+amt)
+		img.ZIndex=btn.ZIndex+1
+		img.Size=UDim2.new(0,0,0,0)
+		img.Position=UDim2.new(.5,0,.5,0)
+		img.Parent=btn
+		img:TweenSizeAndPosition(UDim2.new(0,btn.AbsoluteSize.X,0,btn.AbsoluteSize.X),UDim2.new(.5,-(btn.AbsoluteSize.X/2),.5,-(btn.AbsoluteSize.X/2)),Enum.EasingDirection.Out,Enum.EasingStyle.Linear,.5)	
+		for i=0.1,1,.05 do
+			img.ImageTransparency=i
+			wait()
+		end
+		img:Destroy()
+	end)
+end
+
+local wearingFX={}
+nav:WaitForChild'Display':WaitForChild'wear'.MouseButton1Down:connect(function()
+	click();flood(nav:WaitForChild'Display':WaitForChild'wear')
+	purchase:InvokeServer(hat_[1],hat_[2],hat_[3])
+	local box=Instance.new("Frame",hat_[4]);wearingFX[hat_[1]]=box
+	box.Size=UDim2.new(0,10,0,10)
+	box.BackgroundColor3=Color3.new(1/255, 150/255, 213/255)
+	box.BorderSizePixel=0
+	box.Position=UDim2.new(0,10,0,10)
+	box.ZIndex=4
+	desModel()
+	loadModel()
+end)
+nav:WaitForChild'Display':WaitForChild'buy'.MouseButton1Down:connect(function()
+	click();flood(nav:WaitForChild'Display':WaitForChild'wear')
+	market:PromptPurchase(plr,hat_[3])
+end)
+
+plr.Character.DescendantRemoving:connect(function(c)
+	local nam=c.Name
+	if wearingFX[nam] then
+		c.Name="NULL"
+		if not plr.Character:findFirstChild(nam) then
+			wearingFX[nam]:Destroy()
+		end
+	end
+end)
+
+local function iconFX(imgB)
+	for a,img in pairs(imgB) do
+		img.MouseEnter:connect(function()
+			img.Position=UDim2.new(0,0,0,-54)
+		end)
+		img.MouseLeave:connect(function()
+			img.Position=UDim2.new(0,0,0,0)
+		end)
+	end
+end
+
+iconFX({footer.prev.ImageButton,footer.nex.ImageButton})
+
+function getQueryPage(page)
+	local searches=frm:FindFirstChild'SEARCHES'
+	local strPage=tostring(page)
+	frm:WaitForChild'TextLabel'.Visible=false
+	if searches then 
+		if frm['SEARCHES']:findFirstChild(strPage) then
+			for _,v in pairs(searches:GetChildren()) do
+				v.Visible=false
+			end 
+			searches[strPage].Visible=true
+			frm:WaitForChild'TextLabel'.Visible=#searches[strPage]:GetChildren()==1
+		else 
+			local thepages=load_items()
+		end
+	else
+		local thepages=load_items()
+		if thepages==false then
+			return false
+		end
+	end
+	return true
+end
+
+function getPage(num)
+	local strPage=tostring(page)
+	local pg=frm[search_type]:findFirstChild(strPage)
+	frm:WaitForChild'TextLabel'.Visible=false
+	if pg then
+		for _,v in pairs(frm[search_type]:GetChildren()) do
+			v.Visible=false
+		end
+		frm[search_type][tostring(page)].Visible=true
+		frm:WaitForChild'TextLabel'.Visible=#pg:GetChildren()==1
+	else
+		local thepages=load_items()
+		if thepages==false then
+			return false
+		end
+	end
+	return true
+end
+
+footer.nex.ImageButton.MouseButton1Down:connect(function()
+	if turning==false then
+		turning=true
+		
+		page=page+1
+		footer.page.Text='Page '..page
+		
+		local res=false
+		
+		if query=='' then
+			res=getPage(page)
+		else
+			res=getQueryPage(page)
+		end
+
+		turning=false
+	end
+end)
+
+footer.prev.ImageButton.MouseButton1Down:connect(function()
+	if page~=1 and not turning then
+		turning=true
+		
+		page=page-1
+		footer.page.Text='Page '..page
+		
+		local res=false
+		
+		if query=='' then
+			res=getPage(page)
+		else
+			res=getQueryPage(page)
+		end
+
+		turning=false
+	end
+end)
+
+menu.Changed:connect(function(p)
+	if p=="Visible" then
+		if menu.Visible==true then
+			loadModel()
+		else
+			desModel()
+		end
+	end
+end)
+char.ChildAdded:connect(function()
+	if menu.Visible then
+		desModel()
+		loadModel()
+	end
+end)
+char.ChildRemoved:connect(function()
+	if menu.Visible then
+		desModel()
+		loadModel()
+	end
+end)
+char:WaitForChild'Head':WaitForChild'face'.Changed:connect(function(p)
+	if p=="Texture" and menu.Visible then
+		desModel()
+		loadModel()
+	end
+end)
+comm.OnClientInvoke=function(i)
+	cover.TextLabel.Text="Attempt: "..tostring(i)
+end
+load_items()
+end
+loadCat()
+
+--script.Parent=nil
