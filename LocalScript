@@ -1,0 +1,40 @@
+// roblox studio -> startergui -> catalog
+
+local plr=game.Players.LocalPlayer
+local char=nil; repeat wait() until plr.Character; char=plr.Character
+local menu=script.Parent:WaitForChild'Menus'
+local quick=menu:WaitForChild'Quick'
+local wear=game.ReplicatedStorage:WaitForChild'Wear'
+local funcs={
+	['removeHats']=function()
+		local items={}
+		for a,d in pairs(char:GetChildren()) do
+			if d:IsA'Accoutrement' then
+				table.insert(items,d.Name)
+			end
+		end
+		wear:InvokeServer(items,"accessories")
+	end,
+	['removeFace']=function()
+		wear:InvokeServer(nil,"face")
+	end,
+	['removePackage']=function()
+		wear:InvokeServer(nil,"package")
+	end,
+	['removeShirt']=function()
+		wear:InvokeServer(nil,"shirt")
+	end,
+	['removePants']=function()
+		wear:InvokeServer(nil,"pants")
+	end
+}
+
+for a,d in pairs(quick:GetChildren()) do
+	if d:IsA'Frame' then
+		d.button.MouseButton1Down:connect(function()
+			if funcs[d.Name] then 
+				funcs[d.Name]()			
+			end
+		end)
+	end
+end
