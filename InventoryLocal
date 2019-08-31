@@ -1,0 +1,249 @@
+// roblox studio -> startergui -> catalog
+
+local plr=game.Players.LocalPlayer;repeat wait() until plr.Character
+local character=plr.Character
+local wear=game.ReplicatedStorage:WaitForChild'Wear'
+
+local inv=script.Parent:WaitForChild'Menus':WaitForChild'Inventory'
+local cont=inv:WaitForChild'Container'
+local footer=inv:WaitForChild'Footer'
+local prev=footer:WaitForChild'prev':WaitForChild'ImageButton'
+local nex=footer:WaitForChild'nex':WaitForChild'ImageButton'
+local page=footer:WaitForChild'page'
+local ex=inv:WaitForChild'Example'
+local maxPages=1
+local curPage=1
+
+local char = plr.Character
+local catChar=nil
+local rot=0
+local tim = tick()
+local curAnim = nil
+local run=game:GetService('RunService')
+local input=game:GetService'UserInputService'
+local mouseCnn={}
+local deviceT="MouseButton1Down"
+local ghost = {}
+
+function setPage()
+	page.Text=curPage.."/"..maxPages
+end
+
+function loadModel()
+	char.Archivable = true
+	local clo = char:Clone()
+	local mouseDown=false
+	local lastX=0
+	local x,e=pcall(function()
+		for a,d in pairs(clo:GetChildren()) do
+			if (d:IsA'Script' or d:IsA'BillboardGui' or d:IsA'ForceField') and d.Name~="Animate" then
+				d:Destroy()
+			end
+		end
+		for a,d in pairs (clo.Head:GetChildren()) do
+			if d:IsA'Sound' then
+				d:Stop()
+			end
+		end
+		local torso = clo:FindFirstChild'Torso' or clo:FindFirstChild'UpperTorso'
+		local function makeGhost()
+			for a,d in pairs(clo:GetChildren()) do
+				if d:IsA'BasePart' then
+					d.CanCollide = false
+				end
+			end
+		end
+		for a,d in pairs(mouseCnn) do
+			d:Disconnect()
+			table.remove(mouseCnn,a)
+		end
+		mouseCnn[1]=input.InputBegan:connect(function(i)
+			if i.UserInputType==Enum.UserInputType.MouseButton1 then
+				if i.UserInputState==Enum.UserInputState.Begin then
+					local loc=input:GetMouseLocation()
+					if loc.X>=cont.AbsolutePosition.X+cont.AbsoluteSize.X then
+						lastX=loc.X
+						mouseDown=true
+					end
+				end
+			end
+		end)
+		mouseCnn[2]=input.InputEnded:connect(function(i)
+			if i.UserInputType==Enum.UserInputType.MouseButton1 then
+				if i.UserInputState==Enum.UserInputState.End then
+					mouseDown=false
+				end
+			end
+		end)
+		mouseCnn[3]=input.InputChanged:connect(function(i)
+			if i.UserInputType==Enum.UserInputType.MouseMovement then
+				if mouseDown then
+					rot=(rot+((i.Position.X-lastX)/2)) % 360
+					lastX=i.Position.X
+				end
+			end
+		end)
+		for a,d in pairs(ghost) do
+			d:Disconnect()
+			table.remove(ghost,a)
+		end
+		ghost={game:GetService('RunService').Stepped:connect(function()
+			makeGhost()
+		end),
+		torso.Changed:connect(function()
+			makeGhost()
+		end)}
+		char.Archivable=false
+		local siz = {"BodyDepthScale","BodyHeightScale","BodyWidthScale","HeadScale"}
+		local yOff=2
+		if clo.Humanoid.RigType==Enum.HumanoidRigType.R15 then
+			for a,d in pairs(siz) do clo.Humanoid[d].Value = .5 end
+		else
+			--trooper.scaleCharacter(clo,.5)
+			yOff=4
+		end
+		local function doRot()
+			local ray=workspace.CurrentCamera:ScreenPointToRay(cont.AbsoluteSize.X+cont.AbsolutePosition.X+100,((cont.AbsoluteSize.Y/yOff)+cont.AbsolutePosition.Y),10)
+			local view = workspace.CurrentCamera.ViewportSize
+			clo:SetPrimaryPartCFrame(CFrame.new(ray.Origin, ray.Origin + workspace.CurrentCamera.CFrame.lookVector)*CFrame.fromEulerAnglesXYZ(0,math.rad(rot),0))
+		end
+		doRot()
+		clo.Parent=workspace.CurrentCamera
+		run:BindToRenderStep("Bind",Enum.RenderPriority.Camera.Value,function()
+			if tick()-tim>5 then
+				tim=tick()
+				local anim = clo.Animate:GetChildren()[math.random(1,#clo.Animate:GetChildren())]:GetChildren()[1]
+				if curAnim ~= nil then curAnim:Stop() curAnim:Destroy() end		
+				curAnim = clo.Humanoid:LoadAnimation(anim)
+				curAnim:Play(.5)
+			end
+			doRot()
+			if not mouseDown then
+				rot=(rot+1)%360
+			end
+		end)
+	end) if not x then print(e) end
+	catChar=clo
+end
+
+function desModel()
+	if catChar then
+		pcall(function()
+			run:UnbindFromRenderStep("Bind")
+			catChar:Destroy()
+		end)
+		catChar=nil
+	end
+end
+
+function wearing()
+	cont:ClearAllChildren()
+	local items={};for a,d in pairs(character:GetChildren()) do if d:IsA'Shirt' or d:IsA'Pants' or d:IsA'Accoutrement' or d:IsA'CharacterMesh' then table.insert(items,d) end end
+	local pos=0
+	local rpos=0	
+	local tab={}
+	local temp=cont.AbsoluteSize.X
+	local temp2=cont.AbsoluteSize.Y
+	local xslots=math.floor(cont.AbsoluteSize.X/75)
+	local yslots=math.ceil((cont.AbsoluteSize.Y)/90)
+	temp=temp-((xslots*10))
+	temp2=temp2-((yslots*10))
+	xslots=math.floor(temp/75)
+	yslots=math.floor(temp2/90)
+	local rows=math.ceil(#items/xslots)
+	local pages=math.ceil(rows/yslots)
+	maxPages=pages
+	curPage=1
+	for a=1,pages do
+		local frm=Instance.new("Frame",cont)
+		frm.Size=UDim2.new(1,0,1,0)
+		frm.BackgroundTransparency=1
+		frm.Name=tostring(a)
+		if a==1 then frm.Visible=true else frm.Visible=false end
+		for l=1,yslots do
+			for i=1,xslots do
+			if #tab~=#items then
+			local fr=ex:Clone()
+			table.insert(tab,fr)
+			local texture; 
+			if items[#tab]:findFirstChild'AssetId' then 
+				texture="http://www.roblox.com/Thumbs/Asset.ashx?width=110&height=110&assetId="..items[#tab].AssetId.Value
+			elseif items[#tab]:IsA'Accoutrement' then
+				texture="http://www.roblox.com/Thumbs/Asset.ashx?width=110&height=110&assetId="..items[#tab].Handle.Mesh.MeshId:match("%d+")
+			elseif items[#tab]:IsA'Shirt' or items[#tab]:IsA'Pants' then
+				texture="http://www.r5oblox.com/Thumbs/Asset.ashx?width=110&height=110&assetId="..tonumber(items[#tab][items[#tab].Name.."Template"]:match("%d+"))+1
+			else
+				texture="http://www.roblox.com/asset/?id=346014646" 
+			end
+			fr.itm_img.Image=texture
+			fr.lim_name.Text=items[#tab].Name
+			fr.Parent=frm
+			fr.Name=items[#tab].Name
+			fr.Position=UDim2.new(0,pos+(i*10),0,rpos+(l*10))
+			fr.Visible=true
+			local itm_img=fr.itm_img
+			itm_img.MouseButton1Down:connect(function()
+				--Nothing?
+			end)
+			fr:WaitForChild'TextButton'.MouseButton1Down:connect(function()
+				wear:InvokeServer(fr.Name)
+				desModel()
+				loadModel()
+			end)
+			pos=pos+75
+			end
+		end
+		pos=0
+		rpos=rpos+90
+		end
+		pos=0
+		rpos=0
+	end
+	footer.page.Text="PAGE"..curPage.."/"..maxPages
+end
+
+function turning()
+	for a,d in pairs(cont:GetChildren()) do
+		d.Visible=false
+	end
+	cont[tostring(curPage)].Visible=true
+	footer.page.Text="PAGE "..curPage.."/"..maxPages
+end
+
+footer.prev.ImageButton.MouseButton1Down:connect(function()
+	if curPage>1 then
+		curPage=curPage-1
+		turning()
+	end
+end)
+footer.nex.ImageButton.MouseButton1Down:connect(function()
+	if curPage<maxPages then
+		curPage=curPage+1
+		turning()
+	end
+end)
+
+wearing()
+
+character.ChildAdded:connect(function()
+	wearing()
+end)
+character.ChildRemoved:connect(function(c)
+	if catChar then
+		if catChar:findFirstChild(c.Name,true) then
+			catChar:findFirstChild(c.Name,true):Destroy()
+		end
+	end
+	wearing()
+end)
+
+inv.Changed:connect(function(p)
+	if p=="Visible" then
+		if inv.Visible==true then
+			print'pussy'
+			loadModel()
+		else
+			desModel()
+		end
+	end
+end)
