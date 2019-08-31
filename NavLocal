@@ -1,0 +1,45 @@
+// roblox studio -> startergui -> catalog
+
+local plr=game.Players.LocalPlayer
+local nav=script.Parent:WaitForChild'Nav'
+local menus=script.Parent:WaitForChild'Menus'
+local create=assert(LoadLibrary("RbxUtility")).Create
+local market=game:GetService'MarketplaceService'
+
+function pop()
+	local sound=create("Sound"){
+			Name="Sound",
+			SoundId="http://www.roblox.com/asset/?id=347564086",
+			PlayOnRemove=true,
+			Parent=workspace.CurrentCamera
+		}
+		sound:Destroy()
+end
+
+for a,d in pairs(nav:GetChildren()) do
+	if menus:FindFirstChild(d.Name) then
+		d.button.MouseButton1Down:connect(function()
+			pop()
+			if not menus[d.Name].Visible then
+				for a,d in pairs(menus:GetChildren()) do
+					d.Visible=false
+				end
+				--workspace.CurrentCamera.CameraType=Enum.CameraType.Scriptable
+				menus['Quick'].Visible=true
+				menus[d.Name].Visible=true
+			else
+				--workspace.CurrentCamera.CameraType=Enum.CameraType.Custom
+				menus['Quick'].Visible=false
+				menus[d.Name].Visible=false
+			end
+		end)
+	elseif d.Name=="Take" then
+		d.button.MouseButton1Down:connect(function()
+			market:PromptPurchase(plr,485103207)
+		end)
+	elseif d.Name=="Donate" then
+		d.button.MouseButton1Down:connect(function()
+			market:PromptPurchase(plr,1230852500)
+		end)
+	end
+end
